@@ -1,63 +1,21 @@
-// Configuration globale
+/**
+ * Application : Carte Interactive des Sites de Mayotte
+ * Version : 2.0 (Dashboard Moderne)
+ */
+
 const viewDiv = document.getElementById("viewDiv");
 
-/**
- * Affiche un message d'état sur la carte
- */
-function setViewStatus(message, type = "info") {
-  if (!viewDiv) return;
-  let status = document.getElementById("mapStatus");
-  if (!status) {
-    status = document.createElement("div");
-    status.id = "mapStatus";
-    status.style.position = "absolute";
-    status.style.top = "20px";
-    status.style.left = "20px";
-    status.style.zIndex = "50";
-    status.style.padding = "10px 20px";
-    status.style.borderRadius = "8px";
-    status.style.color = "white";
-    status.style.fontWeight = "600";
-    status.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-    status.style.pointerEvents = "none";
-    viewDiv.appendChild(status);
-  }
-  const bg = { info: "#0f766e", success: "#16a34a", error: "#dc2626" };
-  status.style.backgroundColor = bg[type] || bg.info;
-  status.textContent = message;
-}
-
-function clearViewStatus() {
-  const status = document.getElementById("mapStatus");
-  if (status) status.remove();
-}
-
-/**
- * Attend que le SDK ArcGIS soit prêt
- */
+// Attendre le SDK ArcGIS
 function waitForArcGIS() {
-  return new Promise((resolve, reject) => {
-    if (window.__arcgisLoaded && typeof window.require === "function") {
-      resolve();
-      return;
-    }
-
-    const check = setInterval(() => {
-      if (window.__arcgisLoaded && typeof window.require === "function") {
-        clearInterval(check);
-        clearTimeout(timeoutId);
-        resolve();
+  return new Promise(res => {
+    const it = setInterval(() => {
+      if(window.__arcgisLoaded && window.require){
+        clearInterval(it);
+        res();
       }
     }, 100);
-
-    const timeoutId = setTimeout(() => {
-      clearInterval(check);
-      reject(new Error("Le SDK ArcGIS n'a pas pu se charger."));
-    }, 15000);
   });
 }
-
-setViewStatus("Chargement des données...");
 
 waitForArcGIS().then(() => {
   window.require([
@@ -67,83 +25,100 @@ waitForArcGIS().then(() => {
     "esri/Graphic",
     "esri/geometry/Point",
     "esri/core/promiseUtils"
-  ], function(Map, MapView, GraphicsLayer, Graphic, Point, promiseUtils) {
+  ], (Map, MapView, GraphicsLayer, Graphic, Point, promiseUtils) => {
 
-    // 1. Initialisation Carte
+    // --- INITIALISATION ---
     const map = new Map({ basemap: "hybrid" });
-    const graphicsLayer = new GraphicsLayer({ title: "Sites" });
-    map.add(graphicsLayer);
-
     const view = new MapView({
       container: "viewDiv",
       map: map,
       center: [45.15, -12.85],
-      zoom: 10,
+      zoom: 11,
+      ui: { components: ["zoom", "attribution"] }, // Interface épurée
       popup: {
         autoOpenEnabled: false,
         dockEnabled: false,
-        defaultPopupTemplateEnabled: false
+        collapseEnabled: false,
+        highlightEnabled: true
       }
     });
 
-    // 2. Utilitaires
-    function dmsToDecimal(dms) {
-      if (!dms) return null;
+    const layer = new GraphicsLayer();
+    map.add(layer);
+
+    // --- LOGIQUE MÉTIER ---
+
+    // Conversion DMS vers Décimal robuste
+    function dmsToDec(dms) {
+      if(!dms) return null;
       const clean = dms.toString()
         .replace(/[″”""\s]/g, '"')
         .replace(/[′’''\s]/g, "'")
         .replace(/\s/g, "");
-      const match = clean.match(/^(\d+)°(\d+)'([\d.]+)"([NSEW])$/i);
-      if (!match) return null;
-      let dec = Number(match[1]) + Number(match[2])/60 + Number(match[3])/3600;
-      if (["S","W"].includes(match[4].toUpperCase())) dec *= -1;
-      return Number(dec.toFixed(6));
+      const m = clean.match(/^(\d+)°(\d+)'([\d.]+)"([NSEW])$/i);
+      if(!m) return null;
+      let d = Number(m[1]) + Number(m[2])/60 + Number(m[3])/3600;
+      if(["S","W"].includes(m[4].toUpperCase())) d *= -1;
+      return Number(d.toFixed(6));
     }
 
-    function getColor(site) {
-      const score = parseInt(site.etat_global);
-      if (score >= 8) return "#16a34a";
-      if (score >= 6) return "#84cc16";
-      if (score >= 4) return "#f59e0b";
-      if (score >= 0) return "#dc2626";
-      if (site.etat_chimique?.toLowerCase().includes("dégradé")) return "#dc2626";
-      return "#6b7280";
+    const COLORS = {
+      tres_bon: "#16a34a",
+      bon: "#84cc16",
+      moyen: "#f59e0b",
+      degrade: "#dc2626",
+      fatal: "#7f1d1d",
+      inconnu: "#64748b"
+    };
+
+    function getSiteColor(site) {
+      const s = parseInt(site.etat_global);
+      if(s >= 8) return COLORS.tres_bon;
+      if(s >= 6) return COLORS.bon;
+      if(s >= 4) return COLORS.moyen;
+      if(s >= 1) return COLORS.degrade;
+      const chem = (site.etat_chimique || "").toLowerCase();
+      if(chem.includes("très dégradé") || chem.includes("tres degrade")) return COLORS.fatal;
+      if(chem.includes("dégradé") || chem.includes("degrade")) return COLORS.degrade;
+      if(chem.includes("impacté") || chem.includes("impacte")) return COLORS.moyen;
+      return COLORS.inconnu;
     }
 
-    // 3. Contenu du Popup
-    function createPopupHTML(site) {
-      const scoreVal = parseInt(site.etat_global) || "X";
-      const color = getColor(site);
-      const fields = [
+    // --- RENDU POPUP ---
+    function buildPopup(site) {
+      const color = getSiteColor(site);
+      const score = parseInt(site.etat_global) || "X";
+
+      const details = [
         { l: "État Chimique", v: site.etat_chimique },
-        { l: "Flux Sédimentaire", v: site.flux_sedimentaire },
-        { l: "Population", v: site.densite_population },
         { l: "Fréquentation", v: site.frequentation_lagon },
-        { l: "Récif", v: site.etat_recif }
-      ].filter(f => f.v && f.v !== "" && f.v !== "N/A");
+        { l: "Flux Sédimentaire", v: site.flux_sedimentaire },
+        { l: "Récif", v: site.etat_recif },
+        { l: "Densité Pop.", v: site.densite_population }
+      ].filter(r => r.v && r.v !== "N/A" && r.v !== "");
 
       return `
-        <div class="detailed-popup">
-          <div class="popup-header" style="border-left: 8px solid ${color}">
-            <h3>${site.localisation}</h3>
-            <small>ID: ${site.site_id} — Relevé du ${site.date_prelevement.replace(/_/g, '/')}</small>
+        <div class="site-card">
+          <div class="site-card-header" style="border-left: 10px solid ${color}">
+            <h2>${site.localisation}</h2>
+            <small>Site N°${site.site_id} — Relevé du ${site.date_prelevement.replace(/_/g, '/')}</small>
           </div>
-          <div class="popup-body">
-            <div class="score-section">
-              <span class="score-val" style="color:${color}">${scoreVal}</span>
-              <span class="score-max">/10</span>
+          <div class="site-card-body">
+            <div class="site-score">
+              <span class="score-num" style="color:${color}">${score}</span>
+              <span class="score-label">/ 10</span>
             </div>
-            <div class="details-grid">
-              ${fields.map(f => `
-                <div class="detail-item">
-                  <span class="detail-label">${f.l}</span>
-                  <span class="detail-value">${f.v}</span>
+            <div class="grid-info">
+              ${details.map(r => `
+                <div class="info-box">
+                  <div class="info-label">${r.l}</div>
+                  <div class="info-val">${r.v}</div>
                 </div>
               `).join('')}
               ${site.algues && site.algues.length ? `
-                <div class="detail-item">
-                  <span class="detail-label">Algues</span>
-                  <div style="margin-top:5px">${site.algues.map(a => `<span class="algue-badge">${a}</span>`).join('')}</div>
+                <div class="info-box full">
+                  <div class="info-label">Espèces d'algues identifiées</div>
+                  <div style="margin-top:8px">${site.algues.map(a => `<span class="algue-badge">${a}</span>`).join('')}</div>
                 </div>
               ` : ''}
             </div>
@@ -151,132 +126,143 @@ waitForArcGIS().then(() => {
         </div>`;
     }
 
-    // 4. Interaction (Survol Stable)
-    let currentHoverId = null;
+    // --- INTERACTIONS ---
+    let currentId = null;
 
-    const performHitTest = promiseUtils.debounce(async (event) => {
-      const hit = await view.hitTest(event);
-      const result = hit.results.find(r => r.graphic && r.graphic.layer === graphicsLayer);
+    // Debounce du survol pour la performance
+    const onHover = promiseUtils.debounce(async (e) => {
+      const hit = await view.hitTest(e);
+      const res = hit.results.find(r => r.graphic && r.graphic.layer === layer);
 
-      if (result) {
-        const graphic = result.graphic;
-        const site = graphic.attributes;
-
+      if(res) {
         view.container.style.cursor = "pointer";
-
-        // N'ouvrir que si c'est un nouveau site
-        if (currentHoverId !== site.site_id) {
-          currentHoverId = site.site_id;
+        const g = res.graphic;
+        if(currentId !== g.attributes.site_id) {
+          currentId = g.attributes.site_id;
           view.popup.open({
-            location: graphic.geometry,
-            content: createPopupHTML(site)
+            location: g.geometry,
+            content: buildPopup(g.attributes)
           });
         }
       } else {
         view.container.style.cursor = "default";
-        // NOTE: On ne ferme pas le popup ici pour qu'il reste stable.
-        // Il ne changera que si on survole un autre point.
       }
     });
 
-    view.on("pointer-move", (e) => performHitTest(e));
+    view.on("pointer-move", onHover);
 
-    // 5. Chargement des données
-    let allSites = [];
-    async function init() {
+    // --- CHARGEMENT DES DONNÉES ---
+    let sites = [];
+
+    async function loadData() {
       try {
-        const response = await fetch("./data/sites.json");
-        const data = await response.json();
+        const r = await fetch("./data/sites.json");
+        const data = await r.json();
 
-        allSites = data.map(s => ({
+        sites = data.map(s => ({
           ...s,
-          latitude: dmsToDecimal(s.latitude_dms),
-          longitude: dmsToDecimal(s.longitude_dms)
-        })).filter(s => s.latitude && s.longitude);
+          lat: dmsToDec(s.latitude_dms),
+          lon: dmsToDec(s.longitude_dms)
+        })).filter(s => s.lat && s.lon);
 
-        allSites.forEach(site => {
-          graphicsLayer.add(new Graphic({
-            geometry: new Point({ longitude: site.longitude, latitude: site.latitude }),
+        sites.forEach(s => {
+          layer.add(new Graphic({
+            geometry: new Point({ longitude: s.lon, latitude: s.lat }),
             symbol: {
               type: "simple-marker",
-              color: getColor(site),
-              size: 12,
-              outline: { color: "white", width: 2 }
+              color: getSiteColor(s),
+              size: 14,
+              outline: { color: "white", width: 3 }
             },
-            attributes: site
+            attributes: s
           }));
         });
 
-        renderList(allSites);
-        injectLegend();
-        setViewStatus(`${allSites.length} sites chargés`, "success");
-        setTimeout(clearViewStatus, 3000);
+        document.getElementById("resultsCount").textContent = `${sites.length} sites`;
+        initSearch();
+        initLegend();
       } catch (err) {
-        setViewStatus("Erreur de chargement des sites", "error");
+        console.error("Erreur chargement sites:", err);
+        document.getElementById("resultsCount").textContent = "Erreur";
       }
     }
 
-    // 6. Liste & Recherche
-    function renderList(sites) {
-      const list = document.getElementById("siteList");
-      if (!list) return;
-      list.innerHTML = "";
-      sites.forEach(s => {
-        const btn = document.createElement("button");
-        btn.innerHTML = `<strong>${s.localisation}</strong><br><small>ID: ${s.site_id} | État: ${s.etat_global}</small>`;
-        btn.onclick = () => {
-          view.goTo({ center: [s.longitude, s.latitude], zoom: 15 });
-          const g = graphicsLayer.graphics.find(x => x.attributes.site_id === s.site_id);
-          if (g) {
-            currentHoverId = s.site_id;
-            view.popup.open({ location: g.geometry, content: createPopupHTML(s) });
-          }
-          document.getElementById("searchModal").classList.remove("open");
-        };
-        const li = document.createElement("li");
-        li.appendChild(btn);
-        list.appendChild(li);
+    // --- RECHERCHE ---
+    function initSearch() {
+      const input = document.getElementById("searchInput");
+      const drop = document.getElementById("searchResults");
+
+      input.oninput = (e) => {
+        const val = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if(!val) {
+          drop.classList.remove("active");
+          return;
+        }
+
+        const filtered = sites.filter(s =>
+          s.localisation.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(val) ||
+          s.site_id.includes(val) ||
+          (s.etat_global || "").includes(val)
+        );
+
+        if(filtered.length > 0) {
+          drop.innerHTML = filtered.map(s => `
+            <div class="result-item" data-id="${s.site_id}">
+              <strong>${s.localisation}</strong>
+              <span>ID: ${s.site_id} — État: ${s.etat_global || "Non renseigné"}</span>
+            </div>
+          `).join('');
+          drop.classList.add("active");
+
+          // Evenements sur les items
+          document.querySelectorAll(".result-item").forEach(el => {
+            el.onclick = () => {
+              const s = sites.find(x => x.site_id === el.dataset.id);
+              view.goTo({ center: [s.lon, s.lat], zoom: 15 });
+              const g = layer.graphics.find(x => x.attributes.site_id === s.site_id);
+              currentId = s.site_id;
+              view.popup.open({
+                location: g.geometry,
+                content: buildPopup(s)
+              });
+              drop.classList.remove("active");
+              input.value = s.localisation;
+            };
+          });
+        } else {
+          drop.innerHTML = '<div class="result-item">Aucun site trouvé</div>';
+          drop.classList.add("active");
+        }
+      };
+
+      // Fermer au clic ailleurs
+      document.addEventListener("click", (e) => {
+        if(!input.contains(e.target) && !drop.contains(e.target)) {
+          drop.classList.remove("active");
+        }
       });
     }
 
-    const searchInput = document.getElementById("searchInput");
-    if (searchInput) {
-      searchInput.oninput = (e) => {
-        const val = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const filtered = allSites.filter(s =>
-          s.localisation.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(val) ||
-          s.site_id.includes(val)
-        );
-        renderList(filtered);
-      };
-    }
+    // --- LÉGENDE ---
+    function initLegend() {
+      const legend = document.getElementById("legendContent");
+      const rows = [
+        { c: COLORS.tres_bon, t: "Très bon (8-10)" },
+        { c: COLORS.bon, t: "Bon à moyen (6-7)" },
+        { c: COLORS.moyen, t: "Impacté (4-5)" },
+        { c: COLORS.degrade, t: "Dégradé (0-3)" },
+        { c: COLORS.fatal, t: "Très dégradé" },
+        { c: COLORS.inconnu, t: "Non renseigné" }
+      ];
 
-    function injectLegend() {
-      const sidebar = document.querySelector(".sidebar");
-      if (!sidebar) return;
-      if (document.getElementById("legendCard")) return;
-      const sect = document.createElement("section");
-      sect.id = "legendCard";
-      sect.className = "card";
-      sect.innerHTML = `
-        <h3>Légende de santé</h3>
-        <div class="legend-list">
-          <div class="legend-item"><span class="legend-circle" style="background:#16a34a"></span> Très bon (8-10)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#84cc16"></span> Bon à moyen (6-7)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#f59e0b"></span> Impacté (4-5)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#dc2626"></span> Dégradé (0-3)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#6b7280"></span> Non renseigné</div>
+      legend.innerHTML = rows.map(r => `
+        <div class="legend-row">
+          <div class="dot" style="background:${r.c}"></div>
+          <span>${r.t}</span>
         </div>
-      `;
-      sidebar.appendChild(sect);
+      `).join('');
     }
 
-    // Gestion de la modal
-    const modal = document.getElementById("searchModal");
-    document.getElementById("searchToggle").onclick = () => modal.classList.add("open");
-    document.getElementById("searchClose").onclick = () => modal.classList.remove("open");
-    modal.onclick = (e) => { if(e.target === modal) modal.classList.remove("open"); };
-
-    init();
+    loadData();
   });
-}).catch(err => setViewStatus("Erreur fatale SDK ArcGIS", "error"));
+});

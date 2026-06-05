@@ -1,90 +1,40 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Carte interactive des sites</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mayotte | Carte Interactive des Sites</title>
 
-  <!-- Thème ArcGIS -->
-  <link
-    rel="stylesheet"
-    href="https://js.arcgis.com/4.31/esri/themes/light/main.css"
-  />
+  <!-- SDK ArcGIS -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
 
   <!-- Styles locaux -->
-  <link rel="stylesheet" href="./assets/style.css" />
+  <link rel="stylesheet" href="./assets/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>Carte interactive des sites</h1>
-      <p>Fond Esri + popup au survol + recherche de sites</p>
+
+  <!-- Barre de recherche flottante -->
+  <div class="search-container">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Rechercher un site (nom, ID, état)..." autocomplete="off">
+      <div id="resultsCount" class="badge-count">Chargement...</div>
     </div>
-    <div class="badge">ArcGIS Maps SDK for JavaScript</div>
-    <button id="searchToggle" class="search-toggle" title="Ouvrir la recherche">
-      🔍 Recherche
-    </button>
-  </header>
+    <div id="searchResults" class="results-dropdown"></div>
+  </div>
 
-  <main class="app-shell">
-    <aside class="sidebar">
-      <section class="card">
-        <h3>À propos</h3>
-        <p>
-          Carte interactive des sites avec fond satellite, légende de santé et recherche rapide.
-        </p>
-        <p id="stats">Chargement des données...</p>
-      </section>
+  <!-- Légende flottante (bas-gauche) -->
+  <div class="legend-panel">
+    <h4>État de santé global</h4>
+    <div id="legendContent"></div>
+  </div>
 
-      <section id="legendCard" class="card">
-        <h3>Légende de santé</h3>
-        <div class="legend-list">
-          <div class="legend-item"><span class="legend-circle" style="background:#16a34a"></span> Très bon (8-10)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#84cc16"></span> Bon à moyen (6-7)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#f59e0b"></span> Impacté (4-5)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#dc2626"></span> Dégradé (0-3)</div>
-          <div class="legend-item"><span class="legend-circle" style="background:#6b7280"></span> Non renseigné</div>
-        </div>
-      </section>
-    </aside>
-    <div id="viewDiv" aria-label="Carte interactive"></div>
-
-    <!-- Modal de recherche -->
-    <div id="searchModal" class="search-modal">
-      <div class="search-modal-content">
-        <div class="search-modal-header">
-          <h2>Recherche de sites</h2>
-          <button id="searchClose" class="search-close" title="Fermer">✕</button>
-        </div>
-
-        <section class="card">
-          <h3>Recherche</h3>
-          <input
-            id="searchInput"
-            type="search"
-            placeholder="Ex. Longoni, 001, Bandrélé..."
-          />
-          <ul id="siteList" class="site-list"></ul>
-        </section>
-      </div>
-    </div>
-
-    <!-- Info zoom -->
-    <div id="zoomInfo" class="zoom-info">
-      <span>🖱️ Molette: Zoom</span>
-    </div>
-  </main>
+  <!-- Conteneur de carte -->
+  <div id="viewDiv"></div>
 
   <!-- ArcGIS JS API (async + defer pour meilleure compatibilité) -->
-  <script
-    async
-    defer
-    src="https://js.arcgis.com/4.31/"
-    onload="window.__arcgisLoaded = true;"
-  ></script>
+  <script async defer src="https://js.arcgis.com/4.31/" onload="window.__arcgisLoaded = true;"></script>
 
-  <!-- App -->
+  <!-- Logique applicative -->
   <script defer src="./assets/app.js"></script>
 </body>
 </html>
