@@ -4,17 +4,47 @@ require([
   "esri/layers/GraphicsLayer",
   "esri/Graphic",
   "esri/geometry/Point",
-  "esri/core/promiseUtils"
+  "esri/core/promiseUtils",
+  "esri/widgets/Legend",
+  "esri/widgets/Expand"
 ], function (
   Map,
   MapView,
   GraphicsLayer,
   Graphic,
   Point,
-  promiseUtils
+  promiseUtils,
+  Legend,
+  Expand
 ) {
   // =========================================================
-  // 1) OUTILS
+  // 1) CONFIGURATION GÉNÉRALE
+  // =========================================================
+
+  const map = new Map({
+    basemap: "hybrid" // satellite + labels
+  });
+
+  const graphicsLayer = new GraphicsLayer({
+    title: "Sites de prélèvements"
+  });
+
+  map.add(graphicsLayer);
+
+  const view = new MapView({
+    container: "viewDiv",
+    map,
+    center: [45.15, -12.85],
+    zoom: 10,
+    popup: {
+      autoOpenEnabled: false,
+      dockEnabled: false,
+      collapseEnabled: true
+    }
+  });
+
+  // =========================================================
+  // 2) OUTILS
   // =========================================================
 
   function escapeHtml(value) {
@@ -27,12 +57,24 @@ require([
       .replaceAll("'", "&#039;");
   }
 
+  function normalizeText(value) {
+    return (value || "")
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
   function dmsToDecimal(dms) {
     if (!dms || typeof dms !== "string") return null;
 
-    const clean = dms.trim().replace(/\s+/g, "");
-    const match = clean.match(/^(\d+)°(\d+)'([\d.]+)"?([NSEW])$/i);
+    const cleaned = dms
+      .trim()
+      .replace(/\s+/g, "")   // supprime espaces
+      .replace(",", ".");    // sécurité
 
+    const match = cleaned.match(/^(\d+)°(\d+)'([\d.]+)"?([NSEW])$/i);
     if (!match) return null;
 
     const degrees = Number(match[1]);
@@ -49,35 +91,108 @@ require([
     return Number(decimal.toFixed(6));
   }
 
-  function normalizeSite(site) {
+  function parseEtatScore(etatGlobal) {
+    // ex: "7/10" => 7
+    if (!etatGlobal) return null;
+    const match = String(etatGlobal).match(/^(\d+)/);
+    return match ? Number(match[1]) : null;
+  }
+
+  // =========================================================
+  // 3) COULEURS
+  // =========================================================
+  // Logique proposée :
+  // - si score connu :
+  //   0-3   = rouge
+  //   4-5   = orange
+  //   6-7   = jaune/vert
+  //   8-10  = vert
+  // - sinon, fallback par état chimique
+  // - sinon, gris
+  //
+  // Dans le fichier Excel, on a explicitement des états globaux comme 7/10,
+  // 4/10, ou X/10, ainsi que des états chimiques tels que Impacté, Dégradé,
+  // Très dégradé, Potentiellement impacté. 【1-52ff42】
+
+  function getColorByAttributes(site) {
+    const score = parseEtatScore(site.etat_global);
+    const etatChimique = normalizeText(site.etat_chimique);
+
+    if (score !== null) {
+      if (score >= 8) return "#16a34a";     // vert soutenu
+      if (score >= 6) return "#84cc16";     // vert clair
+      if (score >= 4) return "#f59e0b";     // orange
+      return "#dc2626";                     // rouge
+    }
+
+    if (etatChimique.includes("tres degrade")) return "#7f1d1d"; // bordeaux
+    if (etatChimique.includes("degrade")) return "#dc2626";      // rouge
+    if (etatChimique.includes("impacte")) return "#f59e0b";      // orange
+    if (etatChimique.includes("potentiellement impacte")) return "#facc15"; // jaune
+    if (etatChimique.includes("bon")) return "#16a34a";          // vert
+
+    return "#6b7280"; // gris = inconnu / non renseigné
+  }
+
+  function getOutlineColor(fillColor) {
+    // contour légèrement plus foncé
+    return "#111827";
+  }
+
+  function getSizeByAttributes(site) {
+    const score = parseEtatScore(site.etat_global);
+
+    // taille légèrement variable
+    if (score !== null) {
+      if (score >= 8) return 13;
+      if (score >= 6) return 12;
+      if (score >= 4) return 11;
+      return 10;
+    }
+
+    return 10;
+  }
+
+  function getMarkerSymbol(site) {
+    const color = getColorByAttributes(site);
+
     return {
-      ...site,
-      latitude: dmsToDecimal(site.latitude_dms),
-      longitude: dmsToDecimal(site.longitude_dms)
+      type: "simple-marker",
+      style: "circle",
+      color,
+      size: getSizeByAttributes(site),
+      outline: {
+        color: getOutlineColor(color),
+        width: 1.5
+      }
     };
   }
 
-  function buildPopupContent(attrs) {
+  // =========================================================
+  // 4) POPUP
+  // =========================================================
+
+  function buildPopupContent(site) {
     const algues =
-      Array.isArray(attrs.algues) && attrs.algues.length
-        ? attrs.algues.join(", ")
+      Array.isArray(site.algues) && site.algues.length
+        ? site.algues.map(escapeHtml).join(", ")
         : "—";
 
     const rows = [
-      ["Date de prélèvement", attrs.date_prelevement],
-      ["Localisation", attrs.localisation],
-      ["Latitude (DMS)", attrs.latitude_dms],
-      ["Longitude (DMS)", attrs.longitude_dms],
-      ["État global", attrs.etat_global],
-      ["Flux sédimentaire", attrs.flux_sedimentaire],
-      ["État chimique", attrs.etat_chimique],
-      ["Densité de population", attrs.densite_population],
-      ["Fréquentation du lagon", attrs.frequentation_lagon],
-      ["Activités touristiques", attrs.activites_touristiques],
-      ["Patrimoine naturel", attrs.patrimoine_naturel],
-      ["Turbidité", attrs.turbidite],
-      ["État du récif", attrs.etat_recif],
-      ["Température", attrs.temperature],
+      ["Date de prélèvement", site.date_prelevement],
+      ["Localisation", site.localisation],
+      ["Latitude (DMS)", site.latitude_dms],
+      ["Longitude (DMS)", site.longitude_dms],
+      ["État global", site.etat_global],
+      ["Flux sédimentaire", site.flux_sedimentaire],
+      ["État chimique", site.etat_chimique],
+      ["Densité de population", site.densite_population],
+      ["Fréquentation du lagon", site.frequentation_lagon],
+      ["Activités touristiques", site.activites_touristiques],
+      ["Patrimoine naturel", site.patrimoine_naturel],
+      ["Turbidité", site.turbidite],
+      ["État du récif", site.etat_recif],
+      ["Température", site.temperature],
       ["Algues supposées", algues]
     ];
 
@@ -93,61 +208,29 @@ require([
     `;
   }
 
-  // =========================================================
-  // 2) CARTE
-  // =========================================================
-
-  const map = new Map({
-    basemap: "satellite"
-  });
-
-  const graphicsLayer = new GraphicsLayer();
-  map.add(graphicsLayer);
-
-  const view = new MapView({
-    container: "viewDiv",
-    map,
-    center: [45.15, -12.85],
-    zoom: 10,
-    popup: {
-      autoOpenEnabled: false,
-      dockEnabled: false,
-      collapseEnabled: true
-    }
-  });
-
-  const markerSymbol = {
-    type: "simple-marker",
-    style: "circle",
-    color: "#facc15",
-    size: 10,
-    outline: {
-      color: "#111827",
-      width: 1.5
-    }
-  };
-
   function createGraphic(site) {
     return new Graphic({
       geometry: new Point({
         longitude: site.longitude,
         latitude: site.latitude
       }),
-      symbol: markerSymbol,
+      symbol: getMarkerSymbol(site),
       attributes: site,
       popupTemplate: {
-        title: `Site ${site.site_id} — ${site.localisation || "Sans nom"}`,
+        title: `Site ${site.site_id || "—"} — ${site.localisation || "Sans nom"}`,
         content: buildPopupContent(site)
       }
     });
   }
 
   // =========================================================
-  // 3) INTERFACE LISTE
+  // 5) LISTE LATÉRALE
   // =========================================================
 
   function renderList(sites) {
     const list = document.getElementById("siteList");
+    if (!list) return;
+
     list.innerHTML = "";
 
     if (!sites.length) {
@@ -161,9 +244,25 @@ require([
       const li = document.createElement("li");
       const button = document.createElement("button");
 
+      const color = getColorByAttributes(site);
+
       button.innerHTML = `
-        <div class="site-title">Site ${escapeHtml(site.site_id)} — ${escapeHtml(site.localisation)}</div>
-        <div class="site-subtitle">${escapeHtml(site.date_prelevement)}</div>
+        <div class="site-title">
+          <span style="
+            display:inline-block;
+            width:12px;
+            height:12px;
+            border-radius:999px;
+            margin-right:8px;
+            background:${color};
+            border:1px solid #111827;
+            vertical-align:middle;
+          "></span>
+          Site ${escapeHtml(site.site_id)} — ${escapeHtml(site.localisation)}
+        </div>
+        <div class="site-subtitle">
+          ${escapeHtml(site.date_prelevement)} | État global : ${escapeHtml(site.etat_global || "—")}
+        </div>
       `;
 
       button.addEventListener("click", () => {
@@ -192,54 +291,126 @@ require([
   }
 
   // =========================================================
-  // 4) DONNÉES
+  // 6) LÉGENDE HTML SIMPLE
   // =========================================================
 
-  const normalizedSites = window.SITES_DATA
-    .map(normalizeSite)
-    .filter(
-      (site) =>
-        Number.isFinite(site.latitude) &&
-        Number.isFinite(site.longitude) &&
-        site.localisation
-    );
+  function injectLegendHtml() {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
 
-  document.getElementById("stats").textContent =
-    `${normalizedSites.length} sites géolocalisés affichés.`;
+    const card = document.createElement("section");
+    card.className = "card";
+    card.innerHTML = `
+      <h2>Légende</h2>
+      <div style="display:grid; gap:0.5rem;">
+        <div><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#16a34a;border:1px solid #111827;margin-right:8px;"></span> Très bon / bon (score élevé)</div>
+        <div><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#84cc16;border:1px solid #111827;margin-right:8px;"></span> Bon à moyen</div>
+        <div><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#f59e0b;border:1px solid #111827;margin-right:8px;"></span> Impacté / moyen</div>
+        <div><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#dc2626;border:1px solid #111827;margin-right:8px;"></span> Dégradé</div>
+        <div><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#7f1d1d;border:1px solid #111827;margin-right:8px;"></span> Très dégradé</div>
+        <div><span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:#6b7280;border:1px solid #111827;margin-right:8px;"></span> Non renseigné / X/10</div>
+      </div>
+    `;
 
-  normalizedSites.forEach((site) => {
-    graphicsLayer.add(createGraphic(site));
-  });
+    // insère la légende après le premier bloc si possible
+    sidebar.appendChild(card);
+  }
 
-  renderList(normalizedSites);
+  // =========================================================
+  // 7) CHARGEMENT DES DONNÉES
+  // =========================================================
 
-  view.when(() => {
-    if (graphicsLayer.graphics.length > 0) {
-      view.goTo(graphicsLayer.graphics.toArray()).catch(() => {});
+  let allSites = [];
+
+  async function loadSites() {
+    try {
+      const response = await fetch("./data/sites.json");
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP ${response.status}`);
+      }
+
+      const rawSites = await response.json();
+
+      // Transformation des coordonnées DMS -> décimales
+      const normalizedSites = rawSites
+        .map((site) => {
+          const latitude = dmsToDecimal(site.latitude_dms);
+          const longitude = dmsToDecimal(site.longitude_dms);
+
+          return {
+            ...site,
+            latitude,
+            longitude
+          };
+        })
+        .filter(
+          (site) =>
+            Number.isFinite(site.latitude) &&
+            Number.isFinite(site.longitude) &&
+            site.localisation
+        );
+
+      allSites = normalizedSites;
+
+      const stats = document.getElementById("stats");
+      if (stats) {
+        stats.textContent = `${normalizedSites.length} sites géolocalisés chargés.`;
+      }
+
+      normalizedSites.forEach((site) => {
+        graphicsLayer.add(createGraphic(site));
+      });
+
+      renderList(normalizedSites);
+
+      if (normalizedSites.length) {
+        view.goTo(graphicsLayer.graphics.toArray()).catch(() => {});
+      }
+
+      initSearch();
+    } catch (error) {
+      console.error("Erreur de chargement des données :", error);
+
+      const stats = document.getElementById("stats");
+      if (stats) {
+        stats.textContent =
+          "Erreur de chargement des données. Vérifie le chemin ./data/sites.json et le format JSON.";
+      }
     }
-  });
+  }
 
   // =========================================================
-  // 5) RECHERCHE
+  // 8) RECHERCHE
   // =========================================================
 
-  document.getElementById("searchInput").addEventListener("input", (event) => {
-    const query = event.target.value.trim().toLowerCase();
+  function initSearch() {
+    const input = document.getElementById("searchInput");
+    if (!input) return;
 
-    const filtered = !query
-      ? normalizedSites
-      : normalizedSites.filter((site) => {
-          return (
-            (site.site_id || "").toLowerCase().includes(query) ||
-            (site.localisation || "").toLowerCase().includes(query)
-          );
-        });
+    input.addEventListener("input", (event) => {
+      const q = normalizeText(event.target.value);
 
-    renderList(filtered);
-  });
+      if (!q) {
+        renderList(allSites);
+        return;
+      }
+
+      const filtered = allSites.filter((site) => {
+        return (
+          normalizeText(site.site_id).includes(q) ||
+          normalizeText(site.localisation).includes(q) ||
+          normalizeText(site.etat_global).includes(q) ||
+          normalizeText(site.etat_chimique).includes(q)
+        );
+      });
+
+      renderList(filtered);
+    });
+  }
 
   // =========================================================
-  // 6) POPUP AU SURVOL
+  // 9) POPUP AU SURVOL
   // =========================================================
 
   const hoverPopup = promiseUtils.debounce(async (event) => {
@@ -270,5 +441,14 @@ require([
   view.on("pointer-leave", () => {
     view.container.style.cursor = "default";
     view.popup.close();
+  });
+
+  // =========================================================
+  // 10) INITIALISATION
+  // =========================================================
+
+  view.when(() => {
+    injectLegendHtml();
+    loadSites();
   });
 });
