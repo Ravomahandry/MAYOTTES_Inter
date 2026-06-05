@@ -1,27 +1,79 @@
 // Attendre que l'API ArcGIS soit chargée
-function waitForArcGIS() {
-  return new Promise((resolve) => {
-    if (window.__arcgisLoaded && typeof require !== 'undefined') {
+const viewDiv = document.getElementById("viewDiv");
+
+function setViewStatus(message, type = "info") {
+  if (!viewDiv) return;
+
+  let status = document.getElementById("mapStatus");
+  if (!status) {
+    status = document.createElement("div");
+    status.id = "mapStatus";
+    status.style.position = "absolute";
+    status.style.inset = "16px auto auto 16px";
+    status.style.zIndex = "20";
+    status.style.maxWidth = "360px";
+    status.style.padding = "0.85rem 1rem";
+    status.style.borderRadius = "0.75rem";
+    status.style.boxShadow = "0 10px 30px rgba(0, 0, 0, 0.18)";
+    status.style.backdropFilter = "blur(6px)";
+    status.style.fontWeight = "600";
+    status.style.lineHeight = "1.35";
+    status.style.pointerEvents = "none";
+    status.style.whiteSpace = "pre-line";
+    viewDiv.style.position = "relative";
+    viewDiv.appendChild(status);
+  }
+
+  const palette = {
+    info: { bg: "rgba(15, 118, 110, 0.92)", fg: "#ffffff" },
+    success: { bg: "rgba(22, 163, 74, 0.92)", fg: "#ffffff" },
+    error: { bg: "rgba(185, 28, 28, 0.92)", fg: "#ffffff" }
+  };
+
+  const colors = palette[type] || palette.info;
+  status.style.background = colors.bg;
+  status.style.color = colors.fg;
+  status.textContent = message;
+}
+
+function clearViewStatus() {
+  const status = document.getElementById("mapStatus");
+  if (status) {
+    status.remove();
+  }
+}
+
+function waitForArcGIS(timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    if (window.__arcgisLoaded && typeof window.require === "function") {
       resolve();
-    } else {
-      const checkInterval = setInterval(() => {
-        if (window.__arcgisLoaded && typeof require !== 'undefined') {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 100);
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        resolve();
-      }, 10000);
+      return;
     }
+
+    const checkInterval = setInterval(() => {
+      if (window.__arcgisLoaded && typeof window.require === "function") {
+        clearInterval(checkInterval);
+        clearTimeout(timeoutHandle);
+        resolve();
+      }
+    }, 100);
+
+    const timeoutHandle = setTimeout(() => {
+      clearInterval(checkInterval);
+      reject(new Error("Le SDK ArcGIS n'a pas pu se charger."));
+    }, timeoutMs);
   });
 }
 
-waitForArcGIS().then(() => {
-  // Code principal commence ici
-require([
+setViewStatus("Chargement de la carte et des sites...");
+
+waitForArcGIS()
+  .then(() => {
+    if (typeof window.require !== "function") {
+      throw new Error("Le chargeur AMD ArcGIS est indisponible.");
+    }
+
+    window.require([
   "esri/Map",
   "esri/views/MapView",
   "esri/layers/GraphicsLayer",
@@ -540,7 +592,8 @@ require([
         view.goTo(graphicsLayer.graphics.toArray()).catch(() => {});
       }
 
-      initSearch();
+      setViewStatus(`${normalizedSites.length} sites géolocalisés chargés.`, "success");
+      setTimeout(clearViewStatus, 2500);
     } catch (error) {
       console.error("Erreur de chargement des données :", error);
 
@@ -549,6 +602,11 @@ require([
         stats.textContent =
           "Erreur de chargement des données. Vérifie le chemin ./data/sites.json et le format JSON.";
       }
+
+      setViewStatus(
+        "Impossible de charger les sites.\nVérifie que le fichier ./data/sites.json est accessible.",
+        "error"
+      );
     }
   }
 
@@ -647,13 +705,22 @@ require([
   // 10) INITIALISATION
   // =========================================================
 
+  initSearch();
+  loadSites();
+
   view.when(() => {
     injectLegendHtml();
-    loadSites();
     
     console.log("✅ Application chargée");
     console.log("🗺️  Carte affichée");
     console.log("📍 " + allSites.length + " sites trouvés");
   });
-}); // fin require
-}); // fin waitForArcGIS
+    });
+  })
+  .catch((error) => {
+    console.error("Erreur de démarrage ArcGIS :", error);
+    setViewStatus(
+      "La carte n'a pas pu démarrer.\nOuvre la console pour voir l'erreur ArcGIS.",
+      "error"
+    );
+  });
