@@ -36,13 +36,24 @@ function clearViewStatus() {
  * Attend que le SDK ArcGIS soit prêt
  */
 function waitForArcGIS() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    if (window.__arcgisLoaded && typeof window.require === "function") {
+      resolve();
+      return;
+    }
+
     const check = setInterval(() => {
       if (window.__arcgisLoaded && typeof window.require === "function") {
         clearInterval(check);
+        clearTimeout(timeoutId);
         resolve();
       }
     }, 100);
+
+    const timeoutId = setTimeout(() => {
+      clearInterval(check);
+      reject(new Error("Le SDK ArcGIS n'a pas pu se charger."));
+    }, 15000);
   });
 }
 
@@ -243,7 +254,9 @@ waitForArcGIS().then(() => {
     function injectLegend() {
       const sidebar = document.querySelector(".sidebar");
       if (!sidebar) return;
+      if (document.getElementById("legendCard")) return;
       const sect = document.createElement("section");
+      sect.id = "legendCard";
       sect.className = "card";
       sect.innerHTML = `
         <h3>Légende de santé</h3>

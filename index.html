@@ -28,7 +28,26 @@
   </header>
 
   <main class="app-shell">
-    <aside class="sidebar"></aside>
+    <aside class="sidebar">
+      <section class="card">
+        <h3>À propos</h3>
+        <p>
+          Carte interactive des sites avec fond satellite, légende de santé et recherche rapide.
+        </p>
+        <p id="stats">Chargement des données...</p>
+      </section>
+
+      <section id="legendCard" class="card">
+        <h3>Légende de santé</h3>
+        <div class="legend-list">
+          <div class="legend-item"><span class="legend-circle" style="background:#16a34a"></span> Très bon (8-10)</div>
+          <div class="legend-item"><span class="legend-circle" style="background:#84cc16"></span> Bon à moyen (6-7)</div>
+          <div class="legend-item"><span class="legend-circle" style="background:#f59e0b"></span> Impacté (4-5)</div>
+          <div class="legend-item"><span class="legend-circle" style="background:#dc2626"></span> Dégradé (0-3)</div>
+          <div class="legend-item"><span class="legend-circle" style="background:#6b7280"></span> Non renseigné</div>
+        </div>
+      </section>
+    </aside>
     <div id="viewDiv" aria-label="Carte interactive"></div>
 
     <!-- Modal de recherche -->
@@ -38,15 +57,6 @@
           <h2>Recherche de sites</h2>
           <button id="searchClose" class="search-close" title="Fermer">✕</button>
         </div>
-
-        <section class="card">
-          <h3>À propos</h3>
-          <p>
-            Cette application affiche les sites issus du tableau Excel,
-            avec une popup détaillée au passage de la souris.
-          </p>
-          <p id="stats">Chargement des données…</p>
-        </section>
 
         <section class="card">
           <h3>Recherche</h3>
