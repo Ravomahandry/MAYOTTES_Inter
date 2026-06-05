@@ -10,23 +10,29 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; overflow: 
 
 #viewDiv { position: absolute; inset: 0; z-index: 1; }
 
-/* RECHERCHE (TOP LEFT) */
-.search-container { position: absolute; top: 15px; left: 15px; z-index: 1000; width: 300px; }
-.search-box { background: white; padding: 8px 12px; border-radius: 8px; box-shadow: var(--shadow); display: flex; align-items: center; border: 1px solid #e2e8f0; }
-.search-box input { flex: 1; border: none; outline: none; font-size: 0.85rem; font-weight: 500; }
-.badge-count { background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; margin-left: 8px; }
+/* RECHERCHE - POSITION SÉCURISÉE */
+.search-container {
+  position: absolute;
+  top: 25px; /* Plus bas pour éviter le bord */
+  left: 25px;
+  z-index: 1000;
+  width: 320px;
+}
+.search-box { background: white; padding: 10px 15px; border-radius: 10px; box-shadow: var(--shadow); display: flex; align-items: center; border: 1px solid #e2e8f0; }
+.search-box input { flex: 1; border: none; outline: none; font-size: 0.9rem; font-weight: 500; }
+.badge-count { background: var(--primary); color: white; padding: 2px 8px; border-radius: 5px; font-size: 0.7rem; font-weight: 700; margin-left: 10px; }
 
-.results-dropdown { margin-top: 5px; background: white; border-radius: 8px; max-height: 250px; overflow-y: auto; display: none; box-shadow: var(--shadow); border: 1px solid #e2e8f0; }
+.results-dropdown { margin-top: 5px; background: white; border-radius: 10px; max-height: 300px; overflow-y: auto; display: none; box-shadow: var(--shadow); border: 1px solid #e2e8f0; }
 .results-dropdown.active { display: block; }
-.result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem; }
+.result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
 
-/* PANNEAU INFOS FIXE (RIGHT) */
+/* PANNEAU INFOS FIXE (DROITE) */
 .info-panel {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  bottom: 10px;
-  width: 300px;
+  top: 20px;
+  right: 20px;
+  bottom: 20px;
+  width: 340px;
   background: white;
   z-index: 100;
   border-radius: var(--radius);
@@ -36,58 +42,48 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; overflow: 
   overflow: hidden;
 }
 
-.placeholder-text {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-  font-size: 0.8rem;
-  padding: 20px;
-  text-align: center;
-}
-
-/* STYLE DU RAPPORT (UNE SEULE COLONNE STRICTE) */
 .report-popup { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-.report-header { padding: 12px 15px; color: white; flex-shrink: 0; }
-.report-header h2 { font-size: 0.9rem; font-weight: 800; line-height: 1.1; }
-.header-sub { font-size: 0.55rem; opacity: 0.8; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
 
-.report-section { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
-.section-title { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 6px; border-left: 3px solid #0f766e; padding-left: 8px; }
+/* EN-TÊTE */
+.report-header { padding: 15px 20px; color: white; flex-shrink: 0; }
+.report-header h2 { font-size: 1rem; font-weight: 800; line-height: 1.2; }
+.header-sub { font-size: 0.6rem; opacity: 0.8; text-transform: uppercase; font-weight: 700; margin-top: 4px; }
 
-.global-score-bar { display: flex; gap: 2px; height: 5px; margin-top: 3px; }
-.score-segment { flex: 1; border-radius: 1px; background: #e2e8f0; }
+/* SECTIONS - UNE SEULE COLONNE STRICTE */
+.report-section { padding: 10px 20px; border-bottom: 1px solid #f1f5f9; }
+.section-title { font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 10px; border-left: 3px solid #0f766e; padding-left: 8px; }
 
-.char-grid { display: flex; flex-direction: column; gap: 6px; }
-.char-row { display: flex; align-items: flex-start; gap: 10px; }
-.char-num { width: 16px; height: 16px; background: #0f766e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 800; flex-shrink: 0; margin-top: 1px; }
-.char-content { flex: 1; min-width: 0; }
-.char-label { font-size: 0.6rem; color: #64748b; font-weight: 700; margin-bottom: 1px; }
-.char-val { font-weight: 700; color: #0f172a; font-size: 0.75rem; display: block; }
-.char-badge { font-size: 0.5rem; padding: 1px 5px; border-radius: 4px; font-weight: 800; display: inline-block; margin-top: 2px; }
+.global-score-bar { display: flex; gap: 4px; height: 8px; margin-top: 5px; }
+.score-segment { flex: 1; border-radius: 2px; background: #e2e8f0; }
 
-.ind-grid { display: flex; flex-direction: column; gap: 6px; }
-.indicator-row { display: flex; flex-direction: column; gap: 3px; }
-.ind-label-row { display: flex; justify-content: space-between; align-items: center; }
-.ind-label { font-size: 0.65rem; font-weight: 700; color: #475569; }
-.ind-score { font-size: 0.65rem; font-weight: 800; color: #0f172a; }
-.ind-track { width: 100%; height: 4px; background: #f1f5f9; border-radius: 2px; overflow: hidden; }
-.ind-fill { height: 100%; border-radius: 2px; }
+/* Caractéristiques : Bloc par bloc vertical */
+.char-grid { display: block; }
+.char-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; width: 100%; }
+.char-num { width: 22px; height: 22px; background: #0f766e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; }
+.char-content { flex: 1; }
+.char-label { font-size: 0.75rem; color: #64748b; font-weight: 700; display: block; }
+.char-val { font-weight: 700; color: #0f172a; font-size: 0.85rem; display: block; margin: 2px 0; }
+.char-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 800; display: inline-block; }
 
-.algae-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.algae-tag { padding: 2px 6px; border-radius: 6px; font-size: 0.6rem; font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; font-style: italic; }
+/* Indicateurs : Un par ligne */
+.ind-grid { display: block; }
+.indicator-row { margin-bottom: 10px; width: 100%; }
+.ind-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.ind-label { font-size: 0.7rem; font-weight: 700; color: #475569; }
+.ind-score { font-size: 0.7rem; font-weight: 800; color: #0f172a; }
+.ind-track { width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+.ind-fill { height: 100%; border-radius: 3px; }
+
+.algae-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.algae-tag { padding: 3px 8px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; font-style: italic; }
 
 /* LÉGENDE */
-.legend-panel { position: absolute; bottom: 15px; left: 15px; z-index: 100; background: white; padding: 10px; border-radius: 8px; box-shadow: var(--shadow); width: 180px; }
-.legend-panel h4 { font-size: 0.6rem; color: #64748b; text-transform: uppercase; margin-bottom: 6px; }
-.legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; font-size: 0.7rem; font-weight: 600; }
-.dot { width: 8px; height: 8px; border-radius: 50%; }
+.legend-panel { position: absolute; bottom: 25px; left: 25px; z-index: 100; background: white; padding: 15px; border-radius: 10px; box-shadow: var(--shadow); width: 220px; }
+.legend-panel h4 { font-size: 0.7rem; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+.legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; font-size: 0.75rem; font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
 
-/* Désactiver popups natifs */
+/* Désactiver les popups ArcGIS */
 .esri-popup { display: none !important; }
 
-@media (max-width: 1000px) {
-  .info-panel { width: 100%; right: 0; bottom: 0; top: auto; height: 40vh; border-radius: 12px 12px 0 0; }
-  .search-container { width: calc(100% - 30px); }
-}
+@media (max-width: 1000px) { .info-panel { display: none; } }

@@ -1,5 +1,5 @@
 /**
- * Application : Dashboard Environnemental Mayotte (Side Panel Version - Strict Column)
+ * Application : Dashboard Environnemental Mayotte (Side Panel Version)
  */
 
 const viewDiv = document.getElementById("viewDiv");
@@ -22,8 +22,17 @@ waitForArcGIS().then(() => {
       map: map,
       center: [45.15, -12.85],
       zoom: 11,
-      ui: { components: ["zoom", "attribution"] },
+      ui: { components: ["attribution"] }, // On gère le zoom manuellement pour éviter les superpositions
       popup: { autoOpenEnabled: false }
+    });
+
+    // Déplacer les widgets par défaut pour éviter la barre de recherche
+    view.ui.move("attribution", "bottom-right");
+
+    // Ajouter les boutons de zoom en bas à droite
+    window.require(["esri/widgets/Zoom"], (Zoom) => {
+        const zoomWidget = new Zoom({ view: view });
+        view.ui.add(zoomWidget, "bottom-right");
     });
 
     const layer = new GraphicsLayer();
@@ -78,7 +87,7 @@ waitForArcGIS().then(() => {
         <header class="report-header" style="background: linear-gradient(135deg, ${color}, #064e3b)">
           <h2>Site N°${site.site_id} — ${site.localisation}</h2>
           <div class="header-sub">Récif Frangeant - Mayotte</div>
-          <div style="font-size:1.1rem; font-weight:900; margin-top:3px">${globalScore}/10</div>
+          <div style="font-size:1.3rem; font-weight:900; margin-top:5px">${globalScore}/10</div>
         </header>
 
         <section class="report-section">
