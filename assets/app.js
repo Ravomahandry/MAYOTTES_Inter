@@ -1,5 +1,5 @@
 /**
- * Application : Dashboard Environnemental Mayotte (Side Panel Version)
+ * Application : Dashboard Environnemental Mayotte (Side Panel Version - Strict Column)
  */
 
 const viewDiv = document.getElementById("viewDiv");
@@ -23,7 +23,7 @@ waitForArcGIS().then(() => {
       center: [45.15, -12.85],
       zoom: 11,
       ui: { components: ["zoom", "attribution"] },
-      popup: { autoOpenEnabled: false } // Désactivation totale des popups
+      popup: { autoOpenEnabled: false }
     });
 
     const layer = new GraphicsLayer();
@@ -78,7 +78,7 @@ waitForArcGIS().then(() => {
         <header class="report-header" style="background: linear-gradient(135deg, ${color}, #064e3b)">
           <h2>Site N°${site.site_id} — ${site.localisation}</h2>
           <div class="header-sub">Récif Frangeant - Mayotte</div>
-          <div style="font-size:1.3rem; font-weight:900; margin-top:5px">${globalScore}/10</div>
+          <div style="font-size:1.1rem; font-weight:900; margin-top:3px">${globalScore}/10</div>
         </header>
 
         <section class="report-section">
@@ -91,10 +91,10 @@ waitForArcGIS().then(() => {
         <section class="report-section">
           <div class="section-title">CARACTÉRISTIQUES DU MILIEU</div>
           <div class="char-grid">
-            ${renderChar(1, "🌊 Flux séd.", site.flux_sedimentaire.split('(')[0], flux.v+"/"+flux.m)}
-            ${renderChar(2, "⚗️ État chim.", site.etat_chimique, site.etat_chimique)}
+            ${renderChar(1, "🌊 Flux sédimentaire", site.flux_sedimentaire.split('(')[0], flux.v+"/"+flux.m)}
+            ${renderChar(2, "⚗️ État chimique", site.etat_chimique, site.etat_chimique)}
             ${renderChar(3, "👥 Population", site.densite_population.split('(')[0], pop.v+"/"+pop.m)}
-            ${renderChar(4, "🚣 Fréquent.", "Pêche / Activités", "Modéré")}
+            ${renderChar(4, "🚣 Fréquentation", "Pêche / Activités", "Modéré")}
             ${renderChar(7, "👁️ Visibilité", site.turbidite.split('=')[1] || "N/A", turb.v+"/"+turb.m)}
             ${renderChar(8, "🪸 Santé Récif", site.etat_recif, "Moyen")}
           </div>
@@ -113,7 +113,7 @@ waitForArcGIS().then(() => {
         <section class="report-section" style="border:none">
           <div class="section-title">ALGUES SUPPOSÉES</div>
           <div class="algae-tags">
-            ${site.algues && site.algues.length ? site.algues.slice(0, 8).map(a => `<span class="algae-tag">${a}</span>`).join('') : "N/A"}
+            ${site.algues && site.algues.length ? site.algues.slice(0, 10).map(a => `<span class="algae-tag">${a}</span>`).join('') : "N/A"}
           </div>
         </section>
       </div>`;
@@ -125,7 +125,8 @@ waitForArcGIS().then(() => {
         <div class="char-num">${n}</div>
         <div class="char-content">
           <div class="char-label">${label}</div>
-          <div class="char-val-container"><span class="char-val">${val || "N/A"}</span>${getBadge(badge)}</div>
+          <span class="char-val">${val || "N/A"}</span>
+          ${getBadge(badge)}
         </div>
       </div>`;
     }
@@ -134,9 +135,11 @@ waitForArcGIS().then(() => {
       const pct = (val / max) * 100;
       return `
       <div class="indicator-row">
-        <div class="ind-label">${label}</div>
+        <div class="ind-label-row">
+          <span class="ind-label">${label}</span>
+          <span class="ind-score">${val}/${max}</span>
+        </div>
         <div class="ind-track"><div class="ind-fill" style="width:${pct}%; background:${col}"></div></div>
-        <div class="ind-score">${val}/${max}</div>
       </div>`;
     }
 
