@@ -1,3 +1,26 @@
+// Attendre que l'API ArcGIS soit chargée
+function waitForArcGIS() {
+  return new Promise((resolve) => {
+    if (window.__arcgisLoaded && typeof require !== 'undefined') {
+      resolve();
+    } else {
+      const checkInterval = setInterval(() => {
+        if (window.__arcgisLoaded && typeof require !== 'undefined') {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve();
+      }, 10000);
+    }
+  });
+}
+
+waitForArcGIS().then(() => {
+  // Code principal commence ici
 require([
   "esri/Map",
   "esri/views/MapView",
@@ -224,40 +247,137 @@ require([
   // 4) POPUP
   // =========================================================
 
-  function buildPopupContent(site) {
-    const algues =
-      Array.isArray(site.algues) && site.algues.length
-        ? site.algues.map(escapeHtml).join(", ")
-        : "—";
+  function buildDetailedPopupContent(site) {
+    const score = parseEtatScore(site.etat_global) || 0;
+    const scoreColor = getColorByAttributes(site);
+    
+    // Génération des scores par indicateur (simulation basée sur les données)
+    const indicatorScores = {
+      "Flux sédimentaire": site.flux_sedimentaire?.match(/(\d+)/)?.[1] || 3,
+      "État chimique": 4,
+      "Densité population": site.densite_population?.match(/(\d+)/)?.[1] || 4,
+      "Fréquentation": site.frequentation_lagon?.match(/(\d+)/)?.[1] || 3,
+      "Patrimoine": 3,
+      "Turbidité": site.turbidite?.match(/(\d+)/)?.[1] || 1
+    };
 
-    const rows = [
-      ["Date de prélèvement", site.date_prelevement],
-      ["Localisation", site.localisation],
-      ["Latitude (DMS)", site.latitude_dms],
-      ["Longitude (DMS)", site.longitude_dms],
-      ["État global", site.etat_global],
-      ["Flux sédimentaire", site.flux_sedimentaire],
-      ["État chimique", site.etat_chimique],
-      ["Densité de population", site.densite_population],
-      ["Fréquentation du lagon", site.frequentation_lagon],
-      ["Activités touristiques", site.activites_touristiques],
-      ["Patrimoine naturel", site.patrimoine_naturel],
-      ["Turbidité", site.turbidite],
-      ["État du récif", site.etat_recif],
-      ["Température", site.temperature],
-      ["Algues supposées", algues]
+    // État du récif (conversion vers score 0-6)
+    const etatRecifScore = site.etat_recif === "Mangroves/Herbiers" ? 3 : 
+                          site.etat_recif === "Moyen" ? 4 : 2;
+
+    const indicatorEntries = Object.entries(indicatorScores).map(([name, val]) => {
+      const numVal = Math.min(6, Math.max(0, Number(val) || 0));
+      const percentage = (numVal / 6) * 100;
+      const color = numVal >= 5 ? "#16a34a" : numVal >= 3 ? "#84cc16" : "#dc2626";
+      return { name, score: numVal, percentage, color };
+    });
+
+    // État du santé récif (couleur)
+    const recifColor = score >= 7 ? "#16a34a" : score >= 5 ? "#84cc16" : "#dc2626";
+    
+    // Visibilité eau (données simulées)
+    const visibiliteMeters = site.turbidite === "Visibilité 6 m" ? 6 : 
+                             site.turbidite === "Visibilité 3-4 m" ? 3.5 : 2;
+
+    const alguesHtml = Array.isArray(site.algues) && site.algues.length
+      ? site.algues.map(a => `<span class="algue-badge">${escapeHtml(a)}</span>`).join("")
+      : "<span style='color:#999;'>Aucune donnée</span>";
+
+    const characteristics = [
+      { num: 1, label: "Flux sédimentaire", value: escapeHtml(site.flux_sedimentaire) },
+      { num: 2, label: "État chimique", value: escapeHtml(site.etat_chimique) },
+      { num: 3, label: "Densité population", value: escapeHtml(site.densite_population) },
+      { num: 4, label: "Fréquentation", value: escapeHtml(site.frequentation_lagon) },
+      { num: 5, label: "Activités", value: escapeHtml(site.activites_touristiques) || "N/A" },
+      { num: 6, label: "Patrimoine", value: escapeHtml(site.patrimoine_naturel) },
+      { num: 7, label: "Turbidité", value: escapeHtml(site.turbidite) },
+      { num: 8, label: "État récif", value: escapeHtml(site.etat_recif) },
+      { num: 9, label: "Température", value: escapeHtml(site.temperature) || "N/A" },
+      { num: 10, label: "Date prélèvement", value: escapeHtml(site.date_prelevement) }
     ];
 
     return `
-      <div class="popup-grid">
-        ${rows
-          .map(
-            ([label, value]) =>
-              `<div><span class="popup-label">${escapeHtml(label)} :</span> ${escapeHtml(value)}</div>`
-          )
-          .join("")}
+      <div class="detailed-popup" style="background: linear-gradient(135deg, ${scoreColor}22 0%, transparent 100%);">
+        
+        <!-- EN-TÊTE -->
+        <div class="popup-header" style="border-left: 4px solid ${scoreColor};">
+          <h3>Site N°${escapeHtml(site.site_id)} — ${escapeHtml(site.localisation)}</h3>
+          <div class="state-badge" style="background: ${scoreColor};">État: ${escapeHtml(site.etat_global)}</div>
+        </div>
+
+        <!-- ÉTAT GLOBAL -->
+        <div class="section">
+          <h4>ÉTAT GLOBAL DU MILIEU</h4>
+          <div class="score-display">
+            <div class="score-number" style="color: ${scoreColor};">${score} <span>/10</span></div>
+            <div class="score-bar">
+              <div class="score-fill" style="width: ${score * 10}%; background: ${scoreColor};"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARACTÉRISTIQUES -->
+        <div class="section">
+          <h4>CARACTÉRISTIQUES DU MILIEU</h4>
+          <div class="characteristics-grid">
+            ${characteristics.map(c => `
+              <div class="characteristic-item">
+                <div class="char-number">${c.num}</div>
+                <div class="char-content">
+                  <div class="char-label">${c.label}</div>
+                  <div class="char-value">${c.value}</div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- SCORES PAR INDICATEUR -->
+        <div class="section">
+          <h4>SCORES PAR INDICATEUR (SUR 6)</h4>
+          <div class="indicators">
+            ${indicatorEntries.map(ind => `
+              <div class="indicator-row">
+                <div class="indicator-label">${ind.name}</div>
+                <div class="indicator-bar">
+                  <div class="indicator-fill" style="width: ${ind.percentage}%; background: ${ind.color};"></div>
+                </div>
+                <div class="indicator-score">${ind.score}/6</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- SANTÉ RÉCIF -->
+        <div class="section reef-section">
+          <div class="reef-status">
+            <span style="color: ${recifColor}; font-weight: bold;">État de santé récif frangant:</span>
+            <span>${escapeHtml(site.etat_recif)}</span>
+          </div>
+        </div>
+
+        <!-- VISIBILITÉ EAU -->
+        <div class="section">
+          <h4>VISIBILITÉ EAU</h4>
+          <div class="visibility-bar">
+            <div class="visibility-fill" style="width: ${(visibiliteMeters / 6) * 100}%;"></div>
+          </div>
+          <div class="visibility-label">${visibiliteMeters} m</div>
+        </div>
+
+        <!-- ALGUES -->
+        <div class="section">
+          <h4>ESPÈCES SUPPOSÉES D'ALGUES</h4>
+          <div class="algues-container">
+            ${alguesHtml}
+          </div>
+        </div>
       </div>
     `;
+  }
+
+  function buildPopupContent(site) {
+    return buildDetailedPopupContent(site);
   }
 
   function createGraphic(site) {
@@ -535,4 +655,5 @@ require([
     console.log("🗺️  Carte affichée");
     console.log("📍 " + allSites.length + " sites trouvés");
   });
-});
+}); // fin require
+}); // fin waitForArcGIS
