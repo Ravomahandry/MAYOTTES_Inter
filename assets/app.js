@@ -1,5 +1,5 @@
 /**
- * Application : Carte de Monitoring (Version Ultra-Compacte)
+ * Application : Carte de Monitoring (Version Portrait Slim - Sans Scroll)
  */
 
 const viewDiv = document.getElementById("viewDiv");
@@ -22,7 +22,17 @@ waitForArcGIS().then(() => {
       center: [45.15, -12.85],
       zoom: 11,
       ui: { components: ["zoom"] },
-      popup: { autoOpenEnabled: false, dockEnabled: false, collapseEnabled: false }
+      popup: {
+        autoOpenEnabled: false,
+        dockEnabled: true, // Docking activé pour éviter que ça soit coupé
+        dockOptions: {
+          buttonEnabled: false,
+          position: "top-right",
+          breakpoint: false
+        },
+        collapseEnabled: false,
+        highlightEnabled: true
+      }
     });
 
     const layer = new GraphicsLayer();
@@ -79,7 +89,7 @@ waitForArcGIS().then(() => {
             <h2>Site N°${site.site_id} — ${site.localisation}</h2>
             <div class="header-sub">Récif Frangeant - Mayotte</div>
           </div>
-          <div style="font-size:1.2rem; font-weight:900">${globalScore}/10</div>
+          <div style="font-size:1.1rem; font-weight:900">${globalScore}/10</div>
         </header>
 
         <section class="report-section">
@@ -108,6 +118,7 @@ waitForArcGIS().then(() => {
             ${renderInd("Chimie", (site.etat_chimique?2:0), 6, "#dc2626")}
             ${renderInd("Densité", pop.v, pop.m, "#dc2626")}
             ${renderInd("Turbidité", turb.v, turb.m, "#dc2626")}
+            ${renderInd("Santé Récif", 3, 6, "#f59e0b")}
           </div>
         </section>
 
