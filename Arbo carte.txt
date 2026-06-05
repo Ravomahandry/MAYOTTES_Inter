@@ -1,15 +1,45 @@
-
 D:\VS Code\Carte_interactive
-│   index.html
-│   README.md
-│   .gitignore
 │
-├───assets
-│       app.js
-│       style.css
+├── 📄 index.html              [Page principale HTML]
+├── 📄 README.md               [Documentation du projet]
+├── 📄 package.json            [Métadonnées du projet]
+├── 📄 .gitignore              [Fichiers à ignorer dans Git]
 │
-├───data
-│       sites.js
+├── 📁 assets/
+│   ├── app.js                 [Logique ArcGIS + interactions (550 lignes)]
+│   └── style.css              [Feuille de styles responsive]
 │
-└───docs
-        implementation.md
+├── 📁 data/
+│   └── sites.json             [17 sites avec coordonnées DMS converties]
+│
+├── 📁 docs/
+│   └── implementation.md       [Notes techniques d'implémentation]
+│
+└── 📁 .git/                   [Repository Git]
+
+
+⚙️  TECHNOLOGIES UTILISÉES:
+  • ArcGIS Maps SDK for JavaScript v4.31
+  • Vanilla JavaScript (ES6+)
+  • HTML5 + CSS3 (Responsive)
+  • JSON (données des sites)
+
+📊 CONTENU DONNÉES:
+  • 17 sites de prélèvements (001-017)
+  • Coordonnées en DMS converties en décimales
+  • Métadonnées: état global, chimique, biodiversité
+  • Champs: localisation, densité pop., activités, algues
+
+🚀 DÉPLOIEMENT:
+  ✓ GitHub Pages compatible
+  ✓ Chemins relatifs (./data, ./assets)
+  ✓ Pas de dépendances externes (API ArcGIS en CDN)
+  ✓ Responsive Mobile/Tablette/Desktop
+
+🔗 ACCÈS:
+  • Local: python -m http.server 8000
+  • GitHub: https://github.com/Ravomahandry/MAYOTTES_Inter
+  • Live: https://Ravomahandry.github.io/MAYOTTES_Inter
+
+✅ STATUS: Entièrement fonctionnel et prêt pour production
+

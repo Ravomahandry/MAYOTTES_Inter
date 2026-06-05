@@ -1,0 +1,25 @@
+{
+  "name": "Carte Interactive Mayotte",
+  "version": "1.0.0",
+  "description": "Application web interactive pour visualiser les sites de prélèvements à Mayotte",
+  "keywords": [
+    "mayotte",
+    "cartographie",
+    "arcgis",
+    "interactive",
+    "sites",
+    "prélèvements",
+    "lagune"
+  ],
+  "author": "Ravomahandry",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ravomahandry/MAYOTTES_Inter.git"
+  },
+  "scripts": {
+    "serve": "python -m http.server 8000",
+    "serve-node": "npx http-server -p 8000"
+  },
+  "devDependencies": {}
+}
