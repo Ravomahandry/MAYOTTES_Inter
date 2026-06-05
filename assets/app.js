@@ -113,7 +113,7 @@ waitForArcGIS().then(() => {
         <section class="report-section" style="border:none">
           <div class="section-title">ALGUES SUPPOSÉES</div>
           <div class="algae-tags">
-            ${site.algues && site.algues.length ? site.algues.map(a => `<span class="algae-tag">${a}</span>`).join('') : "N/A"}
+            ${site.algues && site.algues.length ? site.algues.slice(0, 8).map(a => `<span class="algae-tag">${a}</span>`).join('') : "N/A"}
           </div>
         </section>
       </div>`;
