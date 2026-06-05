@@ -3,38 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mayotte | Carte Interactive des Sites</title>
-
-  <!-- SDK ArcGIS -->
+  <title>Mayotte | Dashboard Environnemental</title>
   <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
-
-  <!-- Styles locaux -->
   <link rel="stylesheet" href="./assets/style.css">
 </head>
 <body>
 
-  <!-- Barre de recherche flottante -->
+  <!-- Barre de recherche en haut à gauche -->
   <div class="search-container">
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Rechercher un site (nom, ID, état)..." autocomplete="off">
-      <div id="resultsCount" class="badge-count">Chargement...</div>
+      <input type="text" id="searchInput" placeholder="Rechercher un site..." autocomplete="off">
+      <div id="resultsCount" class="badge-count">...</div>
     </div>
     <div id="searchResults" class="results-dropdown"></div>
   </div>
 
-  <!-- Légende flottante (bas-gauche) -->
+  <!-- Panneau de données fixe à droite (Remplace le popup) -->
+  <div id="infoPanel" class="info-panel">
+    <div class="placeholder-text">Survolez un point pour voir les détails</div>
+  </div>
+
+  <!-- Légende en bas à gauche -->
   <div class="legend-panel">
-    <h4>État de santé global</h4>
+    <h4>Santé Globale</h4>
     <div id="legendContent"></div>
   </div>
 
-  <!-- Conteneur de carte -->
   <div id="viewDiv"></div>
 
-  <!-- ArcGIS JS API (async + defer pour meilleure compatibilité) -->
   <script async defer src="https://js.arcgis.com/4.31/" onload="window.__arcgisLoaded = true;"></script>
-
-  <!-- Logique applicative -->
   <script defer src="./assets/app.js"></script>
 </body>
 </html>

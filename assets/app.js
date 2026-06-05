@@ -1,8 +1,9 @@
 /**
- * Application : Carte de Monitoring (Version Portrait Slim - Sans Scroll)
+ * Application : Dashboard Environnemental Mayotte (Side Panel Version)
  */
 
 const viewDiv = document.getElementById("viewDiv");
+const infoPanel = document.getElementById("infoPanel");
 
 function waitForArcGIS() {
   return new Promise(res => {
@@ -21,18 +22,8 @@ waitForArcGIS().then(() => {
       map: map,
       center: [45.15, -12.85],
       zoom: 11,
-      ui: { components: ["zoom"] },
-      popup: {
-        autoOpenEnabled: false,
-        dockEnabled: true, // Docking activé pour éviter que ça soit coupé
-        dockOptions: {
-          buttonEnabled: false,
-          position: "top-right",
-          breakpoint: false
-        },
-        collapseEnabled: false,
-        highlightEnabled: true
-      }
+      ui: { components: ["zoom", "attribution"] },
+      popup: { autoOpenEnabled: false } // Désactivation totale des popups
     });
 
     const layer = new GraphicsLayer();
@@ -74,22 +65,20 @@ waitForArcGIS().then(() => {
       return `<span class="char-badge" style="background:${bg}; color:${co}">${text}</span>`;
     }
 
-    // --- POPUP RENDERER ---
-    function buildPopup(site) {
+    // --- RENDERER DANS LE PANNEAU LATÉRAL ---
+    function updatePanel(site) {
       const globalScore = parseInt(site.etat_global) || 0;
       const color = getSiteColor(site);
       const flux = parseScore(site.flux_sedimentaire);
       const pop = parseScore(site.densite_population);
       const turb = parseScore(site.turbidite);
 
-      return `
+      infoPanel.innerHTML = `
       <div class="report-popup">
         <header class="report-header" style="background: linear-gradient(135deg, ${color}, #064e3b)">
-          <div>
-            <h2>Site N°${site.site_id} — ${site.localisation}</h2>
-            <div class="header-sub">Récif Frangeant - Mayotte</div>
-          </div>
-          <div style="font-size:1.1rem; font-weight:900">${globalScore}/10</div>
+          <h2>Site N°${site.site_id} — ${site.localisation}</h2>
+          <div class="header-sub">Récif Frangeant - Mayotte</div>
+          <div style="font-size:1.3rem; font-weight:900; margin-top:5px">${globalScore}/10</div>
         </header>
 
         <section class="report-section">
@@ -118,7 +107,6 @@ waitForArcGIS().then(() => {
             ${renderInd("Chimie", (site.etat_chimique?2:0), 6, "#dc2626")}
             ${renderInd("Densité", pop.v, pop.m, "#dc2626")}
             ${renderInd("Turbidité", turb.v, turb.m, "#dc2626")}
-            ${renderInd("Santé Récif", 3, 6, "#f59e0b")}
           </div>
         </section>
 
@@ -152,7 +140,7 @@ waitForArcGIS().then(() => {
       </div>`;
     }
 
-    // --- INTERACTIONS & CHARGEMENT ---
+    // --- INTERACTIONS ---
     let currentId = null;
     const onHover = promiseUtils.debounce(async (e) => {
       const hit = await view.hitTest(e);
@@ -162,12 +150,13 @@ waitForArcGIS().then(() => {
         const g = res.graphic;
         if(currentId !== g.attributes.site_id) {
           currentId = g.attributes.site_id;
-          view.popup.open({ location: g.geometry, content: buildPopup(g.attributes) });
+          updatePanel(g.attributes);
         }
       } else { view.container.style.cursor = "default"; }
     });
     view.on("pointer-move", onHover);
 
+    // --- CHARGEMENT ---
     let sites = [];
     fetch("./data/sites.json").then(r => r.json()).then(data => {
       sites = data.map(s => ({ ...s, lat: dmsToDec(s.latitude_dms), lon: dmsToDec(s.longitude_dms) }))
@@ -197,8 +186,7 @@ waitForArcGIS().then(() => {
           el.onclick = () => {
             const s = sites.find(x => x.site_id === el.dataset.id);
             view.goTo({ center: [s.lon, s.lat], zoom: 15 });
-            const g = layer.graphics.find(x => x.attributes.site_id === s.site_id);
-            view.popup.open({ location: g.geometry, content: buildPopup(s) });
+            updatePanel(s);
             drop.classList.remove("active");
             input.value = s.localisation;
           };
