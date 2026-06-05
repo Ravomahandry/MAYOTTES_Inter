@@ -18,6 +18,17 @@ require([
   Expand
 ) {
   // =========================================================
+  // 0) COMPATIBILITÉ NAVIGATEURS
+  // =========================================================
+  
+  console.log("🌐 Navigateur:", navigator.userAgent.includes("Chrome") ? "Chrome" : navigator.userAgent.includes("Edge") ? "Edge" : navigator.userAgent.includes("Opera") ? "Opera" : navigator.userAgent.includes("Safari") ? "Safari" : "Autre");
+  
+  // Fix pour Chrome et autres navigateurs
+  const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+  const isEdge = /Edg/.test(navigator.userAgent);
+  const isOpera = /Opera/.test(navigator.userAgent) || /OPR\//.test(navigator.userAgent);
+
+  // =========================================================
   // 1) CONFIGURATION GÉNÉRALE
   // =========================================================
 
@@ -40,6 +51,47 @@ require([
       autoOpenEnabled: false,
       dockEnabled: false,
       collapseEnabled: true
+    },
+    // Compatibilité Chrome
+    constraints: {
+      minZoom: 5,
+      maxZoom: 18,
+      rotationEnabled: false
+    }
+  });
+
+  // =========================================================
+  // 1.5) GESTION MODAL DE RECHERCHE
+  // =========================================================
+
+  const searchModal = document.getElementById("searchModal");
+  const searchToggle = document.getElementById("searchToggle");
+  const searchClose = document.getElementById("searchClose");
+
+  function openSearchModal() {
+    searchModal.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeSearchModal() {
+    searchModal.classList.remove("open");
+    document.body.style.overflow = "auto";
+  }
+
+  searchToggle.addEventListener("click", openSearchModal);
+  searchClose.addEventListener("click", closeSearchModal);
+
+  // Fermer la modal en cliquant en dehors
+  searchModal.addEventListener("click", (e) => {
+    if (e.target === searchModal) {
+      closeSearchModal();
+    }
+  });
+
+  // Fermer avec Echap
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && searchModal.classList.contains("open")) {
+      closeSearchModal();
     }
   });
 
@@ -410,7 +462,7 @@ require([
   }
 
   // =========================================================
-  // 9) POPUP AU SURVOL
+  // 8.5) POPUP AU SURVOL
   // =========================================================
 
   const hoverPopup = promiseUtils.debounce(async (event) => {
@@ -444,11 +496,43 @@ require([
   });
 
   // =========================================================
+  // 9) ZOOM À LA MOLETTE
+  // =========================================================
+
+  let wheelTimeout;
+
+  view.container.addEventListener("wheel", (event) => {
+    event.preventDefault();
+
+    const zoomStep = 1;
+    const direction = event.deltaY > 0 ? -1 : 1;
+    const newZoom = Math.max(5, Math.min(18, view.zoom + direction * zoomStep));
+
+    if (newZoom !== view.zoom) {
+      view.zoom = newZoom;
+
+      // Afficher l'indicateur de zoom
+      const zoomInfo = document.getElementById("zoomInfo");
+      zoomInfo.style.opacity = "1";
+      zoomInfo.textContent = `🔍 Zoom: ${newZoom}`;
+
+      clearTimeout(wheelTimeout);
+      wheelTimeout = setTimeout(() => {
+        zoomInfo.style.opacity = "0";
+      }, 1500);
+    }
+  }, { passive: false });
+
+  // =========================================================
   // 10) INITIALISATION
   // =========================================================
 
   view.when(() => {
     injectLegendHtml();
     loadSites();
+    
+    console.log("✅ Application chargée");
+    console.log("🗺️  Carte affichée");
+    console.log("📍 " + allSites.length + " sites trouvés");
   });
 });
