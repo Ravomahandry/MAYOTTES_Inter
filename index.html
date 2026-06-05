@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carte interactive des sites</title>
+
+  <!-- Thème ArcGIS -->
+  <link
+    rel="stylesheet"
+    href="https://js.arcgis.com/4.31/esri/themes/light/main.css"
+  />
+
+  <!-- Styles locaux -->
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Carte interactive des sites</h1>
+      <p>Fond Esri + popup au survol + recherche de sites</p>
+    </div>
+    <div class="badge">ArcGIS Maps SDK for JavaScript</div>
+  </header>
+
+  <main class="app-shell">
+    <aside class="sidebar">
+      <section class="card">
+        <h2>À propos</h2>
+        <p>
+          Cette application affiche les sites issus du tableau Excel,
+          avec une popup détaillée au passage de la souris.
+        </p>
+        <p id="stats">Chargement des données…</p>
+      </section>
+
+      <section class="card">
+        <h2>Recherche</h2>
+        <input
+          id="searchInput"
+          type="search"
+          placeholder="Ex. Longoni, 001, Bandrélé..."
+        />
+        <ul id="siteList" class="site-list"></ul>
+      </section>
+    </aside>
+
+    <div id="viewDiv" aria-label="Carte interactive"></div>
+  </main>
+
+  <!-- ArcGIS JS API -->
+  <script src="https://js.arcgis.com/4.31/"></script>
+
+  <!-- Données -->
+  <script src="./data/sites.js"></script>
+
+  <!-- App -->
+  <script src="./assets/app.js"></script>
+</body>
+</html>
