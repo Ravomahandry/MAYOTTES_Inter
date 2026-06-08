@@ -1,7 +1,7 @@
 :root {
   --primary: #0f766e;
   --bg-glass: rgba(255, 255, 255, 0.98);
-  --shadow: 0 10px 30px rgba(0,0,0,0.1);
+  --shadow: 0 10px 30px rgba(0,0,0,0.15);
   --radius: 12px;
 }
 
@@ -10,80 +10,89 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; overflow: 
 
 #viewDiv { position: absolute; inset: 0; z-index: 1; }
 
-/* RECHERCHE - POSITION SÉCURISÉE */
-.search-container {
-  position: absolute;
-  top: 25px; /* Plus bas pour éviter le bord */
-  left: 25px;
-  z-index: 1000;
-  width: 320px;
-}
+/* RECHERCHE */
+.search-container { position: absolute; top: 20px; left: 20px; z-index: 1000; width: 320px; transition: all 0.3s; }
 .search-box { background: white; padding: 10px 15px; border-radius: 10px; box-shadow: var(--shadow); display: flex; align-items: center; border: 1px solid #e2e8f0; }
 .search-box input { flex: 1; border: none; outline: none; font-size: 0.9rem; font-weight: 500; }
 .badge-count { background: var(--primary); color: white; padding: 2px 8px; border-radius: 5px; font-size: 0.7rem; font-weight: 700; margin-left: 10px; }
 
-.results-dropdown { margin-top: 5px; background: white; border-radius: 10px; max-height: 300px; overflow-y: auto; display: none; box-shadow: var(--shadow); border: 1px solid #e2e8f0; }
+.results-dropdown { margin-top: 5px; background: white; border-radius: 10px; max-height: 250px; overflow-y: auto; display: none; box-shadow: var(--shadow); border: 1px solid #e2e8f0; }
 .results-dropdown.active { display: block; }
 .result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
 
-/* PANNEAU INFOS FIXE (DROITE) */
+/* PANNEAU INFOS (SIDEBAR PC) */
 .info-panel {
   position: absolute;
   top: 20px;
   right: 20px;
   bottom: 20px;
-  width: 340px;
+  width: 350px;
   background: white;
-  z-index: 100;
+  z-index: 1100;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.report-popup { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.panel-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.close-panel-btn { display: none; padding: 10px; background: #f1f5f9; border: none; font-weight: 700; color: #64748b; cursor: pointer; }
 
-/* EN-TÊTE */
+/* STYLE DU RAPPORT */
 .report-header { padding: 15px 20px; color: white; flex-shrink: 0; }
-.report-header h2 { font-size: 1rem; font-weight: 800; line-height: 1.2; }
-.header-sub { font-size: 0.6rem; opacity: 0.8; text-transform: uppercase; font-weight: 700; margin-top: 4px; }
-
-/* SECTIONS - UNE SEULE COLONNE STRICTE */
+.report-header h2 { font-size: 1rem; font-weight: 800; }
 .report-section { padding: 10px 20px; border-bottom: 1px solid #f1f5f9; }
-.section-title { font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 10px; border-left: 3px solid #0f766e; padding-left: 8px; }
-
+.section-title { font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 8px; border-left: 3px solid #0f766e; padding-left: 8px; }
 .global-score-bar { display: flex; gap: 4px; height: 8px; margin-top: 5px; }
 .score-segment { flex: 1; border-radius: 2px; background: #e2e8f0; }
 
-/* Caractéristiques : Bloc par bloc vertical */
-.char-grid { display: block; }
-.char-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; width: 100%; }
-.char-num { width: 22px; height: 22px; background: #0f766e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0; }
-.char-content { flex: 1; }
-.char-label { font-size: 0.75rem; color: #64748b; font-weight: 700; display: block; }
-.char-val { font-weight: 700; color: #0f172a; font-size: 0.85rem; display: block; margin: 2px 0; }
-.char-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 800; display: inline-block; }
+.char-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.char-num { width: 18px; height: 18px; background: #0f766e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 800; flex-shrink: 0; }
+.char-label { font-size: 0.7rem; color: #64748b; font-weight: 700; display: block; }
+.char-val { font-weight: 700; color: #0f172a; font-size: 0.8rem; display: block; }
+.char-badge { font-size: 0.6rem; padding: 1px 6px; border-radius: 6px; font-weight: 800; display: inline-block; }
 
-/* Indicateurs : Un par ligne */
-.ind-grid { display: block; }
-.indicator-row { margin-bottom: 10px; width: 100%; }
-.ind-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.ind-label { font-size: 0.7rem; font-weight: 700; color: #475569; }
-.ind-score { font-size: 0.7rem; font-weight: 800; color: #0f172a; }
-.ind-track { width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+.indicator-row { margin-bottom: 8px; }
+.ind-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.ind-label { font-size: 0.7rem; font-weight: 700; }
+.ind-track { width: 100%; height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
 .ind-fill { height: 100%; border-radius: 3px; }
 
-.algae-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-.algae-tag { padding: 3px 8px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; font-style: italic; }
+.algae-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.algae-tag { padding: 2px 8px; border-radius: 8px; font-size: 0.65rem; font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; font-style: italic; }
 
 /* LÉGENDE */
-.legend-panel { position: absolute; bottom: 25px; left: 25px; z-index: 100; background: white; padding: 15px; border-radius: 10px; box-shadow: var(--shadow); width: 220px; }
-.legend-panel h4 { font-size: 0.7rem; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+.legend-panel { position: absolute; bottom: 20px; left: 20px; z-index: 100; background: white; padding: 15px; border-radius: 10px; box-shadow: var(--shadow); width: 220px; }
 .legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; font-size: 0.75rem; font-weight: 600; }
 .dot { width: 10px; height: 10px; border-radius: 50%; }
 
-/* Désactiver les popups ArcGIS */
-.esri-popup { display: none !important; }
+.placeholder-text { padding: 40px; text-align: center; color: #94a3b8; }
 
-@media (max-width: 1000px) { .info-panel { display: none; } }
+/* ======================================= */
+/* MEDIA QUERIES (SMARTPHONE) */
+/* ======================================= */
+@media (max-width: 768px) {
+  .search-container { width: calc(100% - 40px); top: 10px; left: 20px; }
+
+  .info-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 65vh;
+    border-radius: 20px 20px 0 0;
+    transform: translateY(100%); /* Caché par défaut en bas */
+  }
+
+  .info-panel.active {
+    transform: translateY(0); /* Glisse vers le haut */
+  }
+
+  .close-panel-btn { display: block; border-bottom: 1px solid #e2e8f0; }
+
+  .legend-panel { bottom: auto; top: 75px; width: auto; padding: 8px 12px; }
+  .legend-panel h4 { display: none; }
+  .legend-row { font-size: 0.65rem; }
+}

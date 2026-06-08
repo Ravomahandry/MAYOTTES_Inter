@@ -1,9 +1,11 @@
 /**
- * Application : Dashboard Environnemental Mayotte (Side Panel Version)
+ * Application : Dashboard Responsive Mayotte
  */
 
 const viewDiv = document.getElementById("viewDiv");
 const infoPanel = document.getElementById("infoPanel");
+const panelContent = document.getElementById("panelContent");
+const closePanelBtn = document.getElementById("closePanel");
 
 function waitForArcGIS() {
   return new Promise(res => {
@@ -22,17 +24,8 @@ waitForArcGIS().then(() => {
       map: map,
       center: [45.15, -12.85],
       zoom: 11,
-      ui: { components: ["attribution"] }, // On gère le zoom manuellement pour éviter les superpositions
+      ui: { components: ["zoom", "attribution"] },
       popup: { autoOpenEnabled: false }
-    });
-
-    // Déplacer les widgets par défaut pour éviter la barre de recherche
-    view.ui.move("attribution", "bottom-right");
-
-    // Ajouter les boutons de zoom en bas à droite
-    window.require(["esri/widgets/Zoom"], (Zoom) => {
-        const zoomWidget = new Zoom({ view: view });
-        view.ui.add(zoomWidget, "bottom-right");
     });
 
     const layer = new GraphicsLayer();
@@ -74,7 +67,7 @@ waitForArcGIS().then(() => {
       return `<span class="char-badge" style="background:${bg}; color:${co}">${text}</span>`;
     }
 
-    // --- RENDERER DANS LE PANNEAU LATÉRAL ---
+    // --- RENDERER ---
     function updatePanel(site) {
       const globalScore = parseInt(site.etat_global) || 0;
       const color = getSiteColor(site);
@@ -82,7 +75,7 @@ waitForArcGIS().then(() => {
       const pop = parseScore(site.densite_population);
       const turb = parseScore(site.turbidite);
 
-      infoPanel.innerHTML = `
+      panelContent.innerHTML = `
       <div class="report-popup">
         <header class="report-header" style="background: linear-gradient(135deg, ${color}, #064e3b)">
           <h2>Site N°${site.site_id} — ${site.localisation}</h2>
@@ -99,24 +92,20 @@ waitForArcGIS().then(() => {
 
         <section class="report-section">
           <div class="section-title">CARACTÉRISTIQUES DU MILIEU</div>
-          <div class="char-grid">
-            ${renderChar(1, "🌊 Flux sédimentaire", site.flux_sedimentaire.split('(')[0], flux.v+"/"+flux.m)}
-            ${renderChar(2, "⚗️ État chimique", site.etat_chimique, site.etat_chimique)}
-            ${renderChar(3, "👥 Population", site.densite_population.split('(')[0], pop.v+"/"+pop.m)}
-            ${renderChar(4, "🚣 Fréquentation", "Pêche / Activités", "Modéré")}
-            ${renderChar(7, "👁️ Visibilité", site.turbidite.split('=')[1] || "N/A", turb.v+"/"+turb.m)}
-            ${renderChar(8, "🪸 Santé Récif", site.etat_recif, "Moyen")}
-          </div>
+          ${renderChar(1, "🌊 Flux sédimentaire", site.flux_sedimentaire.split('(')[0], flux.v+"/"+flux.m)}
+          ${renderChar(2, "⚗️ État chimique", site.etat_chimique, site.etat_chimique)}
+          ${renderChar(3, "👥 Population", site.densite_population.split('(')[0], pop.v+"/"+pop.m)}
+          ${renderChar(4, "🚣 Fréquentation", "Pêche / Activités", "Modéré")}
+          ${renderChar(7, "👁️ Visibilité", site.turbidite.split('=')[1] || "N/A", turb.v+"/"+turb.m)}
+          ${renderChar(8, "🪸 Santé Récif", site.etat_recif, "Moyen")}
         </section>
 
         <section class="report-section">
-          <div class="section-title">SCORES INDICATEURS (SUR 6)</div>
-          <div class="ind-grid">
-            ${renderInd("Flux séd.", flux.v, 6, color)}
-            ${renderInd("Chimie", (site.etat_chimique?2:0), 6, "#dc2626")}
-            ${renderInd("Densité", pop.v, pop.m, "#dc2626")}
-            ${renderInd("Turbidité", turb.v, turb.m, "#dc2626")}
-          </div>
+          <div class="section-title">SCORES INDICATEURS</div>
+          ${renderInd("Flux séd.", flux.v, 6, color)}
+          ${renderInd("Chimie", (site.etat_chimique?2:0), 6, "#dc2626")}
+          ${renderInd("Densité", pop.v, pop.m, "#dc2626")}
+          ${renderInd("Turbidité", turb.v, turb.m, "#dc2626")}
         </section>
 
         <section class="report-section" style="border:none">
@@ -126,6 +115,9 @@ waitForArcGIS().then(() => {
           </div>
         </section>
       </div>`;
+
+      // Afficher le panneau sur mobile
+      infoPanel.classList.add("active");
     }
 
     function renderChar(n, label, val, badge) {
@@ -154,7 +146,10 @@ waitForArcGIS().then(() => {
 
     // --- INTERACTIONS ---
     let currentId = null;
+
+    // Survol (PC)
     const onHover = promiseUtils.debounce(async (e) => {
+      if (window.innerWidth <= 768) return; // Pas de survol sur mobile
       const hit = await view.hitTest(e);
       const res = hit.results.find(r => r.graphic && r.graphic.layer === layer);
       if(res) {
@@ -166,7 +161,24 @@ waitForArcGIS().then(() => {
         }
       } else { view.container.style.cursor = "default"; }
     });
+
+    // Clic (PC & Mobile)
+    view.on("click", async (e) => {
+      const hit = await view.hitTest(e);
+      const res = hit.results.find(r => r.graphic && r.graphic.layer === layer);
+      if(res) {
+        currentId = res.graphic.attributes.site_id;
+        updatePanel(res.graphic.attributes);
+      }
+    });
+
     view.on("pointer-move", onHover);
+
+    // Bouton fermer
+    closePanelBtn.onclick = () => {
+      infoPanel.classList.remove("active");
+      currentId = null;
+    };
 
     // --- CHARGEMENT ---
     let sites = [];
@@ -209,8 +221,8 @@ waitForArcGIS().then(() => {
     function initLegend() {
       const legend = document.getElementById("legendContent");
       const rows = [
-        { c: COLORS.tres_bon, t: "Très bon (8-10)" }, { c: COLORS.bon, t: "Bon (6-7)" },
-        { c: COLORS.moyen, t: "Impacté (4-5)" }, { c: COLORS.degrade, t: "Dégradé (0-3)" }
+        { c: COLORS.tres_bon, t: "8-10" }, { c: COLORS.bon, t: "6-7" },
+        { c: COLORS.moyen, t: "4-5" }, { c: COLORS.degrade, t: "0-3" }
       ];
       legend.innerHTML = rows.map(r => `<div class="legend-row"><div class="dot" style="background:${r.c}"></div>${r.t}</div>`).join('');
     }

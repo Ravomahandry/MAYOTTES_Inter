@@ -2,14 +2,14 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mayotte | Dashboard Environnemental</title>
   <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
   <link rel="stylesheet" href="./assets/style.css">
 </head>
 <body>
 
-  <!-- Barre de recherche en haut à gauche -->
+  <!-- Barre de recherche -->
   <div class="search-container">
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Rechercher un site..." autocomplete="off">
@@ -18,13 +18,16 @@
     <div id="searchResults" class="results-dropdown"></div>
   </div>
 
-  <!-- Panneau de données fixe à droite (Remplace le popup) -->
+  <!-- Panneau de données (Sidebar PC / Bottom Sheet Mobile) -->
   <div id="infoPanel" class="info-panel">
-    <div class="placeholder-text">Survolez un point pour voir les détails</div>
+    <button id="closePanel" class="close-panel-btn">✕ Fermer</button>
+    <div id="panelContent" class="panel-content">
+      <div class="placeholder-text">Tapez sur un point pour voir les détails</div>
+    </div>
   </div>
 
-  <!-- Légende en bas à gauche -->
-  <div class="legend-panel">
+  <!-- Légende -->
+  <div class="legend-panel" id="legendPanel">
     <h4>Santé Globale</h4>
     <div id="legendContent"></div>
   </div>
