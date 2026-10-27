@@ -53,9 +53,11 @@ waitForArcGIS().then(() => {
     }
 
     function parseScore(str) {
-      const m = (str || "").match(/(\d+)\/(\d+)/);
-      return m ? { v: parseInt(m[1]), m: parseInt(m[2]) } : { v: 0, m: 6 };
-    }
+  const m = (str || "").match(/\((\d+)\/(\d+)\)/);
+  return m
+    ? { v: parseInt(m[1]), m: parseInt(m[2]) }
+    : { v: 0, m: 6 };
+}
 
     function getBadge(text) {
       if(!text) return "";
@@ -92,7 +94,7 @@ waitForArcGIS().then(() => {
 
         <section class="report-section">
           <div class="section-title">CARACTÉRISTIQUES DU MILIEU</div>
-          ${renderChar(1, "🌊 Flux sédimentaire", site.flux_sedimentaire.split('(')[0], flux.v+"/"+flux.m)}
+          ${renderChar(1, "🌊 Flux sédimentaire", (site.flux_sedimentaire || "").split("(")[0], flux.v+"/"+flux.m)}
           ${renderChar(2, "⚗️ État chimique", site.etat_chimique, site.etat_chimique)}
           ${renderChar(3, "👥 Population", site.densite_population.split('(')[0], pop.v+"/"+pop.m)}
           ${renderChar(4, "🚣 Fréquentation", "Pêche / Activités", "Modéré")}
@@ -109,13 +111,81 @@ waitForArcGIS().then(() => {
         </section>
 
         <section class="report-section" style="border:none">
-          <div class="section-title">ALGUES SUPPOSÉES</div>
-          <div class="algae-tags">
-            ${site.algues && site.algues.length ? site.algues.slice(0, 10).map(a => `<span class="algae-tag">${a}</span>`).join('') : "N/A"}
-          </div>
-        </section>
+  <div class="section-title">ALGUES SUPPOSÉES</div>
+
+  <div class="algae-tags">
+    ${
+      site.algues && site.algues.length
+      ? site.algues.slice(0,10).map(a =>
+          `<span class="algae-tag">${a}</span>`
+        ).join('')
+      : "N/A"
+    }
+  </div>
+</section>
+
+<section class="report-section">
+  <div class="section-title">PHOTOS DU SITE</div>
+
+  <div class="site-photos">
+    ${Array.from({length:5}, (_,i) => `
+      <img
+    src="images/algues/${site.site_id}_${i+1}.jpg"
+    class="site-thumb"
+    data-full="images/algues/${site.site_id}_${i+1}.jpg"
+    onerror="this.style.display='none'"
+>
+    `).join('')}
+  </div>
+</section>
       </div>`;
 
+const popup = document.getElementById("photo-popup");
+const popupImg = document.getElementById("photo-popup-img");
+
+document.querySelectorAll(".site-thumb").forEach(img => {
+
+  img.addEventListener("mouseenter", e => {
+
+    popupImg.src = img.dataset.full;
+    popup.style.display = "block";
+
+  });
+
+  img.addEventListener("mousemove", e => {
+
+    const popupWidth = 450;
+    const popupHeight = 450;
+
+    let left = e.clientX + 20;
+    let top = e.clientY - 20;
+
+    // Si le popup dépasse à droite
+    if (left + popupWidth > window.innerWidth) {
+        left = e.clientX - popupWidth - 20;
+    }
+
+    // Si le popup dépasse en bas
+    if (top + popupHeight > window.innerHeight) {
+        top = window.innerHeight - popupHeight - 20;
+    }
+
+    // Si le popup dépasse en haut
+    if (top < 10) {
+        top = 10;
+    }
+
+    popup.style.left = left + "px";
+    popup.style.top = top + "px";
+});
+
+  img.addEventListener("mouseleave", () => {
+
+    popup.style.display = "none";
+
+  });
+
+});
       // Afficher le panneau sur mobile
       infoPanel.classList.add("active");
     }
