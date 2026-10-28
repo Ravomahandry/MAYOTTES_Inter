@@ -152,38 +152,17 @@ document.querySelectorAll(".site-thumb").forEach(img => {
 
   });
 
-  img.addEventListener("mousemove", e => {
+  img.addEventListener("mouseenter", () => {
 
-    const popupWidth = 450;
-    const popupHeight = 450;
+    popupImg.src = img.dataset.full;
 
-    let left = e.clientX + 20;
-    let top = e.clientY - 20;
-
-    // Si le popup dépasse à droite
-    if (left + popupWidth > window.innerWidth) {
-        left = e.clientX - popupWidth - 20;
-    }
-
-    // Si le popup dépasse en bas
-    if (top + popupHeight > window.innerHeight) {
-        top = window.innerHeight - popupHeight - 20;
-    }
-
-    // Si le popup dépasse en haut
-    if (top < 10) {
-        top = 10;
-    }
-
-    popup.style.left = left + "px";
-    popup.style.top = top + "px";
+    popup.style.display = "flex";
 });
 
-  img.addEventListener("mouseleave", () => {
+img.addEventListener("mouseleave", () => {
 
     popup.style.display = "none";
-
-  });
+});
 
 });
       // Afficher le panneau sur mobile
